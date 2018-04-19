@@ -27,20 +27,27 @@ function setInitialState(reactMixin) {
   var getInitialState = reactMixin.getInitialState;
   var componentWillMount = reactMixin.componentWillMount;
 
-  function applyInitialState(instance) {
+  function applyInitialState(instance, applyDirectly) {
     var state = instance.state || {};
     assign(state, getInitialState.call(instance));
-    instance.state = state;
+    if (applyDirectly) {
+      instance.state = state; 
+      console.warn('reactMixin set state directly. This is necessary as there is a `componentWillMount` method being mixed in, which may rely on state being set. Please update component in question to no longer use reactMixin (see subsequent React warning to determine component which needs updating).');
+    } else {
+      instance.setState(state); 
+    }
   }
 
   if (getInitialState) {
     if (!componentWillMount) {
       reactMixin.componentWillMount = function() {
-        applyInitialState(this);
+        // There is no alternative componentWillMount being mixed in, so can safely use `setState`
+        applyInitialState(this, false);
       };
     } else {
       reactMixin.componentWillMount = function() {
-        applyInitialState(this);
+        // Must apply state directly as alternative componentWillMount method may rely on it being set.
+        applyInitialState(this, true);
         componentWillMount.call(this);
       };
     }
